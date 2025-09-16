@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ring with Pulsations (1 cm wall, 2 cm scale bar)</title>
+  <style>
+    :root { font-family: sans-serif; }
+    body { height: 100vh; margin: 0; background: #f8f8f8; position: relative; }
+
+    /* Wrapper marks the ring's initial center; we move THIS left-right */
+    #ring-wrap {
+      position: absolute;
+      top: calc(5cm + 3cm);  /* was +2cm, now +3cm → moved 1 cm further down */
+      left: 50%;
+      transform: translateX(0px);
+      z-index: 1;
+    }
+
+    /* The ring itself (wall thickness = border-width) */
+    #ring {
+      position: absolute;
+      top: 0; left: 0;
+      border: solid crimson 1cm;  /* ✅ visible wall thickness = 1 cm */
+      border-radius: 50%;
+      box-sizing: content-box;     /* width/height are the INNER diameter */
+      transform: translate(-50%, -50%);
+      will-change: transform, width, height, border-width;
+    }
+
+    /* Scale bar + label */
+    .scale-container {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      top: calc((5cm + 3cm) + 14cm/2 + 2cm); /* updated relative to ring */
+      display: flex; flex-direction: column; align-items: center; gap: 0.4cm;
+      z-index: 2;
+    }
+    #scale-bar { width: 2cm; height: 0.4cm; background: #000; }
+    #scale-label { font-size: 0.74cm; color: #000; }
+
+    /* Buttons */
+    .controls {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      top: calc((5cm + 3cm) + 14cm/2 + 2cm + 0.4cm + 0.74cm + 4cm);
+      display: flex; gap: 1cm; z-index: 2; align-items: center;
+    }
+    .btn {
+      padding: 1.2em 2.4em; font-size: 18px;
+      background: crimson; color: #fff; border: none; border-radius: 10px; cursor: pointer;
+    }
+    .btn:hover { background: darkred; }
+  </style>
+</head>
+<body>
+
+  <!-- Fixed center point wrapper -->
+  <div id="ring-wrap">
+    <div id="ring"></div>
+  </div>
+
+  <!-- Scale bar -->
+  <div class="scale-container">
+    <div id="scale-bar"></div>
+    <div id="scale-label">1 µm</div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button id="btn-diameter" class="btn">Pulsate diameter</button>
+    <button id="btn-center" class="btn">Pulsate center</button>
+  </div>
+
+  <script>
+    const ringWrap    = document.getElementById("ring-wrap");
+    const ring        = document.getElementById("ring");
+    const btnDiameter = document.getElementById("btn-diameter");
+    const btnCenter   = document.getElementById("btn-center");
+
+    // Units
+    const cmToPx = 96 / 2.54;
+
+    // Geometry
+    const baseOuterDiameterCm = 14;               // cm
+    const ringWallCm          = 1;                // cm (visible wall thickness)
+    const ampDiameterCm       = 0.1;              // ±0.1 cm
+    const ampCenterCm         = 0.1;              // ±0.1 cm
+
+    const baseOuterPx = baseOuterDiameterCm * cmToPx;
+    const wallPx      = ringWallCm * cmToPx;
+
+    // States
+    let runDiameter = false;
+    let runCenter   = false;
+
+    // Frequencies
+    const freqDiameter = 5, freqCenter = 5;
+    const wDiameter = 2 * Math.PI * freqDiameter;
+    const wCenter   = 2 * Math.PI * freqCenter;
+    const PHASE_SHIFT = Math.PI / 2;
+
+    // Helper: set ring by OUTER diameter
+    function setRingOuter(outerPx) {
+      const inner = Math.max(0, outerPx - 2 * wallPx);
+      ring.style.width       = inner + "px";
+      ring.style.height      = inner + "px";
+      ring.style.borderWidth = wallPx + "px";
+    }
+
+    // Initial size
+    setRingOuter(baseOuterPx);
+
+    function animate(ms) {
+      const t = ms / 1000;
+
+      // Diameter pulsation
+      const dDeltaPx = runDiameter ? (ampDiameterCm * cmToPx * Math.sin(wDiameter * t)) : 0;
+      setRingOuter(baseOuterPx + dDeltaPx);
+
+      // Center pulsation with π/2 phase shift
+      const xOffsetPx = runCenter ? (ampCenterCm * cmToPx * Math.sin(wCenter * t + PHASE_SHIFT)) : 0;
+      ringWrap.style.transform = `translateX(${xOffsetPx}px)`;
+
+      requestAnimationFrame(animate);
+    }
+
+    // Buttons
+    btnDiameter.addEventListener("click", () => { runDiameter = !runDiameter; });
+    btnCenter  .addEventListener("click", () => { runCenter   = !runCenter;   });
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
